@@ -1,0 +1,57 @@
+
+name: Run tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+
+  get-hatch-test-envs:
+    name: Get hatch test environments
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: List hatch envs
+        id: get-test-envs
+        run: |-
+          uv run hatch env show --json | jq -r '
+            with_entries(select(.key | startswith("hatch-test.")))
+            | "envs=\(@json)"
+          ' >> "$GITHUB_OUTPUT"
+
+    outputs:
+      envs: ${{ steps.get-test-envs.outputs.envs }}
+
+  test:
+    name: Run Hatch tests
+    needs: get-hatch-test-envs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env-name: ${{ fromJSON(needs.get-hatch-test-envs.outputs.envs).*.env-vars.ENV_NAME }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ fromJSON(needs.get-hatch-test-envs.outputs.envs)[matrix.env-name].python }}
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Run tests for ${{ matrix.env-name }}
+        run: uv run hatch --env=${{ matrix.env-name }} test
+

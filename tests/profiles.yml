@@ -1,0 +1,10 @@
+test_profile:
+  outputs:
+    default:
+      type: postgres
+      host:     '{{ env_var("DB_HOST") }}'
+      user:     '{{ env_var("DB_USERNAME") }}'
+      password: '{{ env_var("DB_PASSWORD") }}'
+      port:     '{{ env_var("DB_PORT") | as_native }}'
+      dbname:   '{{ env_var("DB_NAME") }}'
+      schema:   '{{ env_var("DB_SCHEMA") }}'

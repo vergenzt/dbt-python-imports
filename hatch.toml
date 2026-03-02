@@ -1,0 +1,34 @@
+[dirs.env]
+virtual = ".venvs"
+
+[envs.hatch-test]
+installer = "uv"
+dependency-groups = ["dev"]
+dependencies = [
+    "dbt-core~={matrix:dbt-core-version}",
+]
+
+[envs.hatch-test.env-vars]
+ENV_NAME = "{env_name}"
+DBT_SEND_ANONYMOUS_USAGE_STATS = "False"  # https://docs.getdbt.com/reference/global-configs/usage-stats
+
+[[envs.hatch-test.matrix]]
+python = ["3.8"]
+dbt-core-version = [
+    "1.6",
+    "1.7",
+    "1.8",
+]
+
+[[envs.hatch-test.matrix]]
+python = ["3.9"]
+dbt-core-version = [
+    "1.9",
+    "1.10",
+]
+
+[[envs.hatch-test.matrix]]
+python = ["3.10"]
+dbt-core-version = [
+    "1.11",
+]

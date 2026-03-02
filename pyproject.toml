@@ -1,0 +1,24 @@
+[project]
+name = "dbt-python-imports"
+version = "0.1.0"
+description = "dbt plugin to add `modules.import` method to Jinja context to import arbitrary Python modules"
+readme = "README.md"
+authors = [
+    { name = "Tim Vergenz", email = "vergenzt@gmail.com" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "dbt-core>=1.6",
+]
+
+[dependency-groups]
+dev = [
+    "hatch>=1.14.2",
+    "pytest>=8.3.5",
+    "dbt-postgres",
+    "tinypg>=0.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
