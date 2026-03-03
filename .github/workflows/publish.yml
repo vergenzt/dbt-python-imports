@@ -1,0 +1,31 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      # Publish on any tag starting with a `v`, e.g., v1.2.3
+      - v*
+
+jobs:
+  pypi:
+    name: Build distribution
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+    - name: Build distribution packages
+      run: uv build
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v5
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish
+      run: uv publish

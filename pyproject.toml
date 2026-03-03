@@ -11,12 +11,16 @@ dependencies = [
     "dbt-core>=1.6",
 ]
 
+[project.urls]
+source = "https://github.com/vergenzt/dbt-python-imports"
+
 [dependency-groups]
 dev = [
     "hatch>=1.14.2",
     "pytest>=8.3.5",
     "dbt-postgres",
     "tinypg>=0.3.0",
+    "ruff>=0.15.4",
 ]
 
 [build-system]

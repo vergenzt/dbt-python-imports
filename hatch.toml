@@ -1,6 +1,12 @@
 [dirs.env]
 virtual = ".venvs"
 
+[build.targets.wheel]
+only-packages = true
+
+[build.targets.sdist]
+only-packages = true
+
 [envs.hatch-test]
 installer = "uv"
 dependency-groups = ["dev"]
