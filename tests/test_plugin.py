@@ -97,7 +97,9 @@ def test_properties_context(dbt_project: Path):
 
     manifest_path = dbt_project / "target" / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
-    assert manifest["nodes"][f"model.{DBT_PROJECT_NAME}.my_model"]["description"].strip() == """
+    assert (
+        manifest["nodes"][f"model.{DBT_PROJECT_NAME}.my_model"]["description"].strip()
+        == """
                                   2026
 
       January                   February                   March
@@ -135,7 +137,7 @@ Mo Tu We Th Fr Sa Su      Mo Tu We Th Fr Sa Su      Mo Tu We Th Fr Sa Su
 26 27 28 29 30 31         23 24 25 26 27 28 29      28 29 30 31
                           30
 """.strip()
-
+    )
 
 
 def test_project_yml_context(dbt_project: Path, monkeypatch):
@@ -168,8 +170,12 @@ def test_project_yml_context(dbt_project: Path, monkeypatch):
     assert model_compiled_path.read_text().strip() == "select 'example.org'"
 
 
-@pytest.mark.xfail(reason="dbt doesn't call set_up_plugin_manager until after profiles.yml is rendered")
-def test_profiles_yml_context(dbt_project: Path, temp_postgres_db_url: str, monkeypatch, capsys):
+@pytest.mark.xfail(
+    reason="dbt doesn't call set_up_plugin_manager until after profiles.yml is rendered"
+)
+def test_profiles_yml_context(
+    dbt_project: Path, temp_postgres_db_url: str, monkeypatch, capsys
+):
     monkeypatch.undo()
 
     monkeypatch.setenv("DBT_PROJECT_DIR", str(dbt_project))
