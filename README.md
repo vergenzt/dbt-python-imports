@@ -48,22 +48,29 @@ See [unit tests](tests/test_plugin.py) for more details on context availability.
 # download the artifacts from your latest Databricks dbt job run
 
 $ echo '
-{%- macro fetch_dbt_artifacts(job_name='dbt build', extract_to=flags.TARGET_PATH ~ '/remote-state') %}
+{#- call via `dbt build --state="$(dbt run-operation -q fetch_remote_state)" --defer ... #}
+{%- macro fetch_remote_state(base_path=invocation_args_dict.project_dir ~ "/" ~ var("remote_state_base_path", "target/remote-state"), job_name="dbt build") %}
   {#- https://databricks-sdk-py.readthedocs.io/en/latest/workspace/jobs/jobs.html #}
   {%- set jobs_api = adapter.config.credentials.authenticate().api_client.jobs %}
   {%- set job = jobs_api.list(name=job_name, limit=1) | first %}
   {%- set job_run = jobs_api.list_runs(job_id=job["job_id"], limit=1, completed_only=true, expand_tasks=true) | first %}
   {%- set task_run = job_run["tasks"] | first %}
-  {%- set dbt_output = jobs_api.get_run_output(run_id=task_run["run_id"]).dbt_output %}
-  {%- set download_url = dbt_output.artifacts_link %}
+  {%- set task_run_output = jobs_api.get_run_output(run_id=task_run["run_id"]) %}
+  {%- set download_url = task_run_output.dbt_output.artifacts_link %}
+
+  {%- set state_path = base_path ~ "/" ~ task_run["run_id"] %}
+  {%- set tar_path = state_path ~ "/dbt-artifacts.tar.gz" %}
 
   {%- set system = modules.import("dbt_common.clients.system") %}
-  {%- set tar_path = extract_to ~ '/dbt-artifacts.tar.gz' %}
+  {%- do system.make_directory(state_path) %}
   {%- do system.download(download_url, tar_path) %}
-  {%- do system.untar_package(tar_path, extract_to) %}
+  {%- do system.untar_package(tar_path, state_path) %}
+
+  {#- print file path to stdout #}
+  {%- do print(state_path ~ "/target") %}
 {%- endmacro %}
-' > macros/fetch_dbt_artifacts.sql
+' > macros/fetch_remote_state.sql
 
-$ dbt run-operation fetch_dbt_artifacts
-
+$ dbt run-operation -q fetch_remote_state
+.../target/remote-state/55665502170299/target
 ```
