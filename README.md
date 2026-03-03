@@ -20,6 +20,7 @@ This is a [dbt plugin][dbt-plugin] to allow importing arbitrary Python modules f
 
 
 > [!warning]
+>
 > **This allows arbitrary code execution.** (That's kindof the point.)
 >
 > Jinja's sandboxing is not foolproof (e.g. some adapters allow arbitrary reads/writes to disk), so you already shouldn't be running untrusted dbt code/packages. However the limited Jinja context available by default does currently make it *harder* to run arbitrary code.
