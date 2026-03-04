@@ -198,7 +198,9 @@ def test_project_yml_config_context(dbt_project: Path, temp_postgres_db_url: str
 @pytest.mark.xfail(
     reason="dbt doesn't call set_up_plugin_manager until after profiles.yml is rendered"
 )
-def test_profiles_yml_context(dbt_project: Path, temp_postgres_db_url: str, monkeypatch):
+def test_profiles_yml_context(
+    dbt_project: Path, temp_postgres_db_url: str, monkeypatch
+):
     monkeypatch.undo()
 
     monkeypatch.setenv("DBT_PROJECT_DIR", str(dbt_project))
