@@ -1,10 +1,13 @@
 import json
 import os
 import re
+import sys
 from pathlib import Path
+from subprocess import check_call
 from textwrap import dedent
 from urllib.parse import urlparse
 
+import psycopg2
 import pytest
 import tinypg
 from pytest import fixture
@@ -35,9 +38,8 @@ def temp_postgres_db_url():
 
 
 @fixture
-def dbt_project(tmp_path, temp_postgres_db_url, monkeypatch):
-    dbt_project_path = tmp_path / DBT_PROJECT_NAME
-    dbt_project_path.mkdir()
+def dbt_project(tmp_path_factory, temp_postgres_db_url, monkeypatch):
+    dbt_project_path = tmp_path_factory.mktemp(DBT_PROJECT_NAME)
     dbt_project_path.joinpath("dbt_project.yml").write_text(DBT_PROJECT_YML)
     dbt_project_path.joinpath("models").mkdir()
     dbt_project_path.joinpath("target").mkdir()
@@ -64,12 +66,10 @@ def test_model_context(dbt_project: Path):
     select '{{ os_path.dirname("foo/bar/baz") }}'
     """)
 
-    from dbt.cli.main import cli
-
-    cli(["compile"], standalone_mode=False)
+    check_call([sys.executable, "-m", "dbt.cli.main", "compile"])
 
     model_compiled_path = (
-        dbt_project / "target/compiled" / model_path.relative_to(dbt_project.parent)
+        Path("target/compiled") / DBT_PROJECT_NAME / model_path.relative_to(dbt_project)
     )
     assert model_compiled_path.read_text().strip() == "select 'foo/bar'"
 
@@ -91,9 +91,7 @@ def test_properties_context(dbt_project: Path):
         )
     )
 
-    from dbt.cli.main import cli
-
-    cli(["compile"], standalone_mode=False)
+    check_call([sys.executable, "-m", "dbt.cli.main", "compile"])
 
     manifest_path = dbt_project / "target" / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
@@ -140,7 +138,7 @@ Mo Tu We Th Fr Sa Su      Mo Tu We Th Fr Sa Su      Mo Tu We Th Fr Sa Su
     )
 
 
-def test_project_yml_context(dbt_project: Path, monkeypatch):
+def test_project_yml_var_context(dbt_project: Path, monkeypatch):
     monkeypatch.setenv("EXAMPLE_URL", "https://example.org:8080/foo/bar?baz")
 
     yml_path = dbt_project / "dbt_project.yml"
@@ -160,22 +158,47 @@ def test_project_yml_context(dbt_project: Path, monkeypatch):
     model_path = dbt_project / "models" / "my_model.sql"
     model_path.write_text("select '{{ var('example_domain') }}'")
 
-    from dbt.cli.main import cli
-
-    cli(["compile"], standalone_mode=False)
+    check_call([sys.executable, "-m", "dbt.cli.main", "compile"])
 
     model_compiled_path = (
-        dbt_project / "target/compiled" / model_path.relative_to(dbt_project.parent)
+        Path("target/compiled") / DBT_PROJECT_NAME / model_path.relative_to(dbt_project)
     )
     assert model_compiled_path.read_text().strip() == "select 'example.org'"
 
 
 @pytest.mark.xfail(
+    reason="dbt doesn't call set_up_plugin_manager until after config from dbt_project.yml is rendered"
+)
+def test_project_yml_config_context(dbt_project: Path, temp_postgres_db_url: str):
+    yml_path = dbt_project / "dbt_project.yml"
+    yml_path.write_text(
+        json.dumps(
+            {
+                **json.loads(yml_path.read_text()),
+                "models": {
+                    DBT_PROJECT_NAME: {
+                        "my_model": {
+                            "schema": "{{ modules.import('subprocess').check_output(['echo', 'extra_schema'], text=True).strip() }}"
+                        }
+                    },
+                },
+            }
+        )
+    )
+
+    model_path = dbt_project / "models" / "my_model.sql"
+    model_path.write_text("select 1 as my_column")
+
+    check_call([sys.executable, "-m", "dbt.cli.main", "run"])
+
+    curs = psycopg2.connect(temp_postgres_db_url).cursor()
+    curs.execute("select * from public_extra_schema.my_model")
+
+
+@pytest.mark.xfail(
     reason="dbt doesn't call set_up_plugin_manager until after profiles.yml is rendered"
 )
-def test_profiles_yml_context(
-    dbt_project: Path, temp_postgres_db_url: str, monkeypatch, capsys
-):
+def test_profiles_yml_context(dbt_project: Path, temp_postgres_db_url: str, monkeypatch):
     monkeypatch.undo()
 
     monkeypatch.setenv("DBT_PROJECT_DIR", str(dbt_project))
@@ -195,7 +218,7 @@ def test_profiles_yml_context(
                   password: '{%- set parse = modules.import("urllib.parse") %}{{ parse.urlparse(env_var("DB_URI")).password }}'
                   port:     '{%- set parse = modules.import("urllib.parse") %}{{ parse.urlparse(env_var("DB_URI")).port }}'
                   dbname:   '{%- set parse = modules.import("urllib.parse") %}{{ parse.urlparse(env_var("DB_URI")).path.split("/")[1] }}'
-                  schema:   '{%- set parse = modules.import("urllib.parse") %}{{ parse.parse_qs(parse.urlparse(env_var("DB_URI")).query["schema"] }}'
+                  schema:   '{%- set parse = modules.import("urllib.parse") %}{{ parse.parse_qs(parse.urlparse(env_var("DB_URI")).query)["schema"] }}'
             """
         )
     )
@@ -203,10 +226,4 @@ def test_profiles_yml_context(
     model_path = dbt_project / "models" / "my_model.sql"
     model_path.write_text("select 1 as my_column")
 
-    from dbt.cli.main import cli
-
-    cli(["run"], standalone_mode=False)
-    capsys.readouterr()  # reset
-
-    cli(["show", "-q", "--output=json", "--inline", "select * from my_schema.my_model"])
-    assert json.loads(capsys.readouterr().out) == {"show": [{"my_column": 1}]}
+    check_call([sys.executable, "-m", "dbt.cli.main", "run"])

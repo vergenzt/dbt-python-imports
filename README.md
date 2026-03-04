@@ -31,12 +31,12 @@ This is a [dbt plugin][dbt-plugin] to allow importing arbitrary Python modules f
 
 ### Available dbt Jinja Contexts
 
-| Context                                                      | Available? |
-| ------------------------------------------------------------ | ---------- |
-| [model & hook SQL](https://docs.getdbt.com/reference/dbt-jinja-functions-context-variables) | ✅          |
-| [model properties.yml](https://docs.getdbt.com/reference/dbt-jinja-functions/dbt-properties-yml-context) | ✅          |
-| [dbt_project.yml](https://docs.getdbt.com/reference/dbt-jinja-functions/dbt-project-yml-context) | ✅          |
-| [profiles.yml](https://docs.getdbt.com/reference/dbt-jinja-functions/profiles-yml-context) | ❌          |
+| Context                                                      | Available?                                  |
+| ------------------------------------------------------------ | ------------------------------------------- |
+| [model & hook SQL](https://docs.getdbt.com/reference/dbt-jinja-functions-context-variables) | ✅                                           |
+| [model properties.yml](https://docs.getdbt.com/reference/dbt-jinja-functions/dbt-properties-yml-context) | ✅                                           |
+| [dbt_project.yml](https://docs.getdbt.com/reference/dbt-jinja-functions/dbt-project-yml-context) | ⚠️ (partial: vars work, configs seem to not) |
+| [profiles.yml](https://docs.getdbt.com/reference/dbt-jinja-functions/profiles-yml-context) | ❌                                           |
 
 See [unit tests](tests/test_plugin.py) for more details on context availability.
 
