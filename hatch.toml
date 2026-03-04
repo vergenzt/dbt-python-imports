@@ -1,3 +1,6 @@
+[version]
+source = "vcs"
+
 [dirs.env]
 virtual = ".venvs"
 
